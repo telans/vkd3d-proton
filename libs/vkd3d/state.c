@@ -2694,6 +2694,19 @@ HRESULT d3d12_pipeline_state_create(struct d3d12_device *device, VkPipelineBindP
     return S_OK;
 }
 
+static bool vkd3d_topology_type_can_restart(D3D12_PRIMITIVE_TOPOLOGY_TYPE type)
+{
+    switch (type)
+    {
+        case D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE:
+        case D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE:
+            return true;
+
+        default:
+            return false;
+    }
+}
+
 static bool vkd3d_topology_can_restart(VkPrimitiveTopology topology)
 {
     switch (topology)
