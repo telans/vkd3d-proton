@@ -1387,11 +1387,13 @@ static void d3d12_pipeline_state_destroy_graphics(struct d3d12_pipeline_state *s
         VK_CALL(vkDestroyShaderModule(device->vk_device, graphics->stages[i].module, NULL));
     }
 
-    LIST_FOR_EACH_ENTRY_SAFE(current, e, &graphics->compiled_pipelines, struct vkd3d_compiled_pipeline, entry)
+    LIST_FOR_EACH_ENTRY_SAFE(current, e, &graphics->compiled_fallback_pipelines, struct vkd3d_compiled_pipeline, entry)
     {
         VK_CALL(vkDestroyPipeline(device->vk_device, current->vk_pipeline, NULL));
         vkd3d_free(current);
     }
+
+    VK_CALL(vkDestroyPipeline(device->vk_device, graphics->pipeline, NULL));
 }
 
 static ULONG STDMETHODCALLTYPE d3d12_pipeline_state_Release(ID3D12PipelineState *iface)
@@ -2634,7 +2636,8 @@ static HRESULT d3d12_pipeline_state_init_graphics(struct d3d12_pipeline_state *s
 
     graphics->root_signature = root_signature;
 
-    list_init(&graphics->compiled_pipelines);
+    list_init(&graphics->compiled_fallback_pipelines);
+    graphics->pipeline = VK_NULL_HANDLE;
 
     if (FAILED(hr = vkd3d_private_store_init(&state->private_store)))
         goto fail;
@@ -2773,7 +2776,7 @@ static VkPipeline d3d12_pipeline_state_find_compiled_pipeline(const struct d3d12
 
     if (!(rc = pthread_mutex_lock(&device->mutex)))
     {
-        LIST_FOR_EACH_ENTRY(current, &graphics->compiled_pipelines, struct vkd3d_compiled_pipeline, entry)
+        LIST_FOR_EACH_ENTRY(current, &graphics->compiled_fallback_pipelines, struct vkd3d_compiled_pipeline, entry)
         {
             if (!memcmp(&current->key, key, sizeof(*key)))
             {
@@ -2814,7 +2817,7 @@ static bool d3d12_pipeline_state_put_pipeline_to_cache(struct d3d12_pipeline_sta
         return false;
     }
 
-    LIST_FOR_EACH_ENTRY(current, &graphics->compiled_pipelines, struct vkd3d_compiled_pipeline, entry)
+    LIST_FOR_EACH_ENTRY(current, &graphics->compiled_fallback_pipelines, struct vkd3d_compiled_pipeline, entry)
     {
         if (!memcmp(&current->key, key, sizeof(*key)))
         {
@@ -2825,7 +2828,7 @@ static bool d3d12_pipeline_state_put_pipeline_to_cache(struct d3d12_pipeline_sta
     }
 
     if (compiled_pipeline)
-        list_add_tail(&graphics->compiled_pipelines, &compiled_pipeline->entry);
+        list_add_tail(&graphics->compiled_fallback_pipelines, &compiled_pipeline->entry);
 
     pthread_mutex_unlock(&device->mutex);
     return compiled_pipeline;
