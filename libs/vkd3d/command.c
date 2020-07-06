@@ -3713,7 +3713,7 @@ static void d3d12_command_list_update_dynamic_state(struct d3d12_command_list *l
                     range.offset, range.count,
                     dyn_state->vertex_buffers + range.offset,
                     dyn_state->vertex_offsets + range.offset,
-                    dyn_state->vertex_sizes + range.offset,
+                    NULL /*dyn_state->vertex_sizes + range.offset*/,
                     dyn_state->vertex_strides + range.offset));
         }
     }
